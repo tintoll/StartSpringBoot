@@ -50,12 +50,20 @@ public class DatabaseConfiguration {
 		sqlSessionFactoryBean.setMapperLocations(
 				applicationContext.getResources("classpath:/mapper/**/sql-*.xml")
 		);
+		// 스네이크표기법 컬럼을 카멜케이스표기법으로 변경하는 설
+		sqlSessionFactoryBean.setConfiguration(mybatisConfig());
 		return sqlSessionFactoryBean.getObject();
 	}
 	
 	@Bean
 	public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
 		return new SqlSessionTemplate(sqlSessionFactory);
+	}
+	
+	@Bean
+	@ConfigurationProperties(prefix = "mybatis.configuration")
+	public org.apache.ibatis.session.Configuration mybatisConfig() {
+		return new org.apache.ibatis.session.Configuration();
 	}
 }
 
