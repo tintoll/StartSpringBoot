@@ -19,9 +19,9 @@ import org.springframework.transaction.interceptor.TransactionInterceptor;
 @Configuration
 public class TransactionAspect {
 	
-	// 트랜잭션에 사용되는 설정값 선
+	// 트랜잭션에 사용되는 설정값 
 	private static final String AOP_TRANSACTION_METHOD_NAME = "*";
-	private static final String AOP_TRANSACTION_EXPRESSION = "excution(* board..service.*Impl.*(..)";
+	private static final String AOP_TRANSACTION_EXPRESSION = "execution(* board..service.*Impl.*(..))";
 	
 	@Autowired
 	private PlatformTransactionManager transactionManager;

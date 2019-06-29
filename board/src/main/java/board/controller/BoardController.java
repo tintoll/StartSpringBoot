@@ -24,6 +24,8 @@ public class BoardController {
 	public ModelAndView openBoardList() throws Exception {
 		log.debug("openBoardList");
 		
+		// int i = 10 / 0 ; //  고의로 에러내기 
+		
 		ModelAndView mv = new ModelAndView("/board/boardList");
 		
 		List<BoardDto> list = boardService.selectBoardList();

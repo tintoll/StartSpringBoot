@@ -13,4 +13,23 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
 	public void addInterceptors(InterceptorRegistry registry) {
 		registry.addInterceptor(new LoggerInterceptor());
 	}
+	
+	/*
+	// 부트 2.1 이하에만 인코딩적용을 하면됨
+	@Bean
+	public Filter characterEncodingFilter() {
+		CharacterEncodingFilter characterEncodingFilter = new CharacterEncodingFilter();
+		// 웹에서 주고 받는 데이터의 헤더값을 UTF-8로 인코딩해준다. 
+		characterEncodingFilter.setEncoding("UTF-8");
+		// 입려값(HttpServlerRequest)과 결과값(HttpServletResponse) 모두에 강제적으로 설정된 인코딩으로 변경한다. 
+		characterEncodingFilter.setForceEncoding(true);
+		return characterEncodingFilter;
+	}
+	
+	@Bean
+	public HttpMessageConverter<String> responseBodyConverter() {
+		// @ResponseBody를 이용하여 결과를 출력할때 그 결과를 UTF-8로 설정합니다.
+		return new StringHttpMessageConverter(Charset.forName("UTF-8"));
+	}
+	*/
 }
