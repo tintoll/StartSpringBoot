@@ -16,5 +16,79 @@
 			ORDER BY BOARD_IDX DESC
 		]]>
 	</select>
+	
+	<insert id="insertBoard" parameterType="board.dto.BoardDto">
+		<![CDATA[
+			INSERT INTO T_BOARD
+			(
+				TITLE,
+				CONTENTS,
+				CREATED_DATETIME,
+				CREATOR_ID
+			)
+			VALUES
+			(
+				#{title},
+				#{contents},
+				NOW(),
+				'admin'
+			)
+		]]>
+	</insert>
+	
+	<update id="updateHitCount" parameterType="int">
+		<![CDATA[
+			UPDATE
+				T_BOARD
+			SET 
+				HIT_CNT = HIT_CNT + 1
+			WHERE
+				BOARD_IDX = #{boardIdx}		
+		]]>
+	</update>
+	
+	<select id="selectBoardDetail" parameterType="int"  resultType="board.dto.BoardDto">
+		<![CDATA[
+			SELECT
+				BOARD_IDX,
+				TITLE,
+				CONTENTS,
+				HIT_CNT,
+				DATE_FORMAT(CREATED_DATETIME, '%Y.%m.%d %H:%i:%s') AS CREATED_DATETIME,
+				CREATOR_ID
+				
+			FROM 
+				T_BOARD
+			WHERE
+				BOARD_IDX = #{boardIdx} AND DELETE_YN = 'N'
+		]]>
+	</select>
+	
+	<update id="updateBoard" parameterType="board.dto.BoardDto">
+		<![CDATA[
+			UPDATE
+				T_BOARD
+			SET 
+				TITLE = #{title},
+				CONTENTS = #{contents},
+				UPDATED_DATETIME = NOW(),
+				UPDATOR_ID = 'admin'
+				
+			WHERE
+				BOARD_IDX = #{boardIdx}		
+		]]>
+	</update>
+	<update id="deleteBoard" parameterType="int">
+		<![CDATA[
+			UPDATE
+				T_BOARD
+			SET 
+				DELETE_YN = 'Y',
+				UPDATED_DATETIME = NOW(),
+				UPDATOR_ID = 'admin'
+			WHERE
+				BOARD_IDX = #{boardIdx}		
+		]]>
+	</update>
 
 </mapper>
