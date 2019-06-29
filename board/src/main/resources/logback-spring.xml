@@ -16,6 +16,11 @@
 
 	<!-- 로거 -->
 	<logger name="board" level="DEBUG" appender-ref="console"/>
+	<logger name="jdbc.sqlonly" level="INFO" apperder-ref="console-infolog" />
+	<logger name="jdbc.resultsettable" level="INFO" apperder-ref="console-infolog" />
+	<logger name="org.springframework" level="error"/>
+	<logger name="org.springframework.jdbc" level="error"/>
+	
 	
 	<!-- 루트 로거 -->
     <root level="error">
