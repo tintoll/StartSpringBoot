@@ -13,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import board.dto.BoardFileDto;
+import board.entity.BoardFileEntity;
 
 @Component
 public class FileUtils {
@@ -64,6 +65,66 @@ public class FileUtils {
 					boardFile.setFileSize(multipartFile.getSize());
 					boardFile.setOriginalFileName(multipartFile.getOriginalFilename());
 					boardFile.setStoredFilePath(path + "/" + newFileName);
+					fileList.add(boardFile);
+					
+					// 새로운 이름을 변경된 파일을 저장한다.
+					file = new File(path + "/" + newFileName);
+					multipartFile.transferTo(file);
+				}
+			}
+			
+		}
+		
+		
+		return fileList;
+	}
+	
+	public List<BoardFileEntity> parseFileInfo(MultipartHttpServletRequest multipartHttpServletRequest) throws Exception {
+		
+		if(ObjectUtils.isEmpty(multipartHttpServletRequest)) {
+			return null;
+		}
+		
+		List<BoardFileEntity> fileList = new ArrayList<>();
+		
+		// 파일 저장 경로 설정 
+		DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyyMMdd");
+		ZonedDateTime current = ZonedDateTime.now(); // 오늘날짜를 가져옵니다. 
+		String path = "images/"+current.format(format);
+		File file = new File(path);
+		if(file.exists() == false) {
+			file.mkdirs();
+		}
+		
+		Iterator<String> iterator = multipartHttpServletRequest.getFileNames();
+		String newFileName, originalFileExtension, contentType;
+		while(iterator.hasNext()) {
+			List<MultipartFile> list = multipartHttpServletRequest.getFiles(iterator.next());
+			for(MultipartFile multipartFile : list) {
+				if(multipartFile.isEmpty() == false) {
+					// 파일 확장자 체크는 contentType으로 해야한다. 파일명에서 가져오면 위변조 할수 있기때문이다.
+					contentType = multipartFile.getContentType();
+					if(ObjectUtils.isEmpty(contentType)) {
+						break;
+					} else {
+						if(contentType.contains("image/jpeg")) {
+							originalFileExtension = ".jpg";
+						}else if(contentType.contains("image/png")) {
+							originalFileExtension = ".png";
+						}else if(contentType.contains("image/gif")) {
+							originalFileExtension = ".gif";
+						}else {
+							break;
+						}
+					}
+					
+					// 파일이름은 중복되지 않게 나노타임을 사용했다.
+					newFileName = Long.toString(System.nanoTime()) + originalFileExtension;
+					BoardFileEntity boardFile = new BoardFileEntity();
+					boardFile.setFileSize(multipartFile.getSize());
+					boardFile.setOriginalFileName(multipartFile.getOriginalFilename());
+					boardFile.setStoredFilePath(path + "/" + newFileName);
+					boardFile.setCreatorId("admin");
 					fileList.add(boardFile);
 					
 					// 새로운 이름을 변경된 파일을 저장한다.
