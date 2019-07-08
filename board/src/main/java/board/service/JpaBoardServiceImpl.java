@@ -32,7 +32,7 @@ public class JpaBoardServiceImpl implements JpaBoardService {
 	public void saveBoard(BoardEntity board, MultipartHttpServletRequest multipartHttpServletRequest) throws Exception {
 		board.setCreatorId("admin");
 		List<BoardFileEntity> list = fileUtils.parseFileInfo(multipartHttpServletRequest);
-		if(CollectionUtils.isEmpty(list)) {
+		if(!CollectionUtils.isEmpty(list)) {
 			board.setFileList(list);
 		}
 		jpaBoardRepository.save(board);

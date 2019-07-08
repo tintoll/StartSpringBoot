@@ -50,7 +50,7 @@ public class JpaBoardController {
 	@PostMapping("/jpa/board/write")
 	public String insertBoard(BoardEntity board, MultipartHttpServletRequest multipartHttpServletRequest) throws Exception {
 		jpaBoardService.saveBoard(board, multipartHttpServletRequest);
-		return "redirect:/board";
+		return "redirect:/jpa/board";
 	}
 	
 	@GetMapping("/jpa/board/{boardIdx}")
@@ -66,13 +66,13 @@ public class JpaBoardController {
 	@PutMapping("/jpa/board/{boardIdx}")
 	public String updateBoard(BoardEntity board) throws Exception {
 		jpaBoardService.saveBoard(board, null);
-		return "redirect:/board";
+		return "redirect:/jpa/board";
 	}
 	
 	@DeleteMapping("/jpa/board/{boardIdx}")
 	public String deleteBoard(@PathVariable("boardIdx") int boardIdx) throws Exception {
 		jpaBoardService.deleteBoard(boardIdx);
-		return "redirect:/board";
+		return "redirect:/jpa/board";
 	}
 	
 	
