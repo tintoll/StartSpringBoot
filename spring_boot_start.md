@@ -106,3 +106,158 @@ sqlSessionFactoryBean.setConfiguration(mybatisConfig());
 하지만 개발하는 시스템의 환경에 따라서 굳이 나눌 필요값 없을 수도 있습니다.
 
 ## 스프링의 다양한 기능
+
+### Logback
+
+##### 설정하기 
+
+- src/main/resources/logback-sping.xml
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xml>
+<configuration debug="true">
+	<!-- Appenders -->
+	<appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<Pattern>%d %5p [%c] %m%n</Pattern>
+		</encoder>   
+	</appender>
+
+	<appender name="console-infolog" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<Pattern>%d %5p %m%n</Pattern>
+		</encoder>   
+	</appender>
+
+	<!-- 로거 -->
+	<logger name="board" level="DEBUG" appender-ref="console"/>
+	
+	<!-- 루트 로거 -->
+    <root level="error">
+        <appender-ref ref="console"/>
+    </root>
+</configuration>
+```
+
+- appender는 로그를 어디에 출력할지(콘솔, 파일 기록, DB저장등) 결정하는 역할 
+- encodeㄱ는 appender에 포함되어 출력할 로그를 지정한 형식으로 변환하는 역할
+- logger는 로그를 출력하는 요소로 level속성을 통해서 출력할 로그의 레벨을 조절하여 appender에 전달합니다.
+
+##### 로그레벨
+
+1. `trace` : 모든 로그를 출력합니다.
+2. `debug` : 개발할때 디버그 용도로 사용합니다.
+3. `info` : 상태변경 등과 같은 정보성 메시지를 나타냅니다.
+4. `warn` : 프로그램의 실행에는 문제가 없지만 추후 시스템 에러의 원인이 될 수 있다는 경고성 메시지를 의미합니다.
+5. `error` : 요청을 처리하던 중 문제가 발생한 것을 의미합니다.
+
+- 아래로 갈수록 레벨이 높아지면 `설정한 로그 레벨 이상의 로그만 출력`됩니다.
+
+##### 사용하기
+
+- 사용하려는 클래스에 아래와 같이 등록하여 사용할수 있습니다.
+
+```java
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+private Logger log = LoggerFactory.getLogger(this.getClass());
+
+log.trace("trace");
+log.debug("debug");
+log.info("info");
+log.warn("warn");
+log.error("error");
+```
+
+### Log4JDBC로 쿼리로그 정렬하기
+
+- logback을 사용하면 쿼리에서 사용되는 파라미터가 보이지 않기때문에 쿼리를 한눈에 알아보기 힘들다.
+- 이러한 문제들을 해결하기 위해서 로그가 정렬되어 출력되고 쿼리에 대한 추가적인 정보도 제공하는 Log4JDBC 라이브러리를 이용할 수 있다. 
+
+##### 라이브러리 추가
+
+```gradle
+implementation group: 'org.bgee.log4jdbc-log4j2', name: 'log4jdbc-log4j2-jdbc4.1', version: '1.16'
+```
+
+##### 설정
+
+```properties
+# log4jdbc.log4j2.properties
+log4jdbc.spylogdelegator.name = net.sf.log4jdbc.log.slf4j.Slf4jSpyLogDelegator
+log4jdbc.dump.sql.maxlineLength = 0
+
+# application.properties
+spring.datasource.hikari.driver-class-name=net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+spring.datasource.hikari.jdbc-url: jdbc:log4jdbc:mysql://localhost:3306/board?useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
+```
+
+```xml
+<!-- logger 추가 -->
+<logger name="jdbc.sqlonly" level="INFO" apperder-ref="console-infolog" />
+<logger name="jdbc.resultsettable" level="INFO" apperder-ref="console-infolog" />
+```
+
+##### log4jdbc가 제공하는 로거
+
+- jdbc.sqlonly : SQL을 보여줍니다. Prepared statement의 경우 관련된 파라미터는 자동으로 변경되어 출력됩니다.
+- jdbc.sqltiming : SQL문과 해당 SQL문의 실행 시간을 밀리초 단위로 보여준다.
+- jdbc.audit : ResultSets를 제외한 모든 JDBC 호출정보를 보여줍니다. 너무 많은 로그가 찍혀서 잘 사용하지 않는다.
+- jdbc.resultset : ResultSets를 포함함 모든 JDBC 호출정보를 보여줍니다.  너무 많은 로그가 찍혀서 잘 사용하지 않는다.
+- jdbc.resulttable : SQL의 조회 결과를 테이블로 보여줍니다.
+- jdbc.connection : Connection의 연결과 종료에 관련된 로그를 보여줍니다. Connection 누수(leak)문제를 해결하는데 도움이 됩니다.
+
+### 인터셉터
+
+스프링의 인터셉터는 어떠한 URI를 호출 했을때 해당 요청의 컨트롤러가 처리되기 전 또는 후에 작업을 하기 위해서 사용됩니다. 이러한 역할은 필터(Filter)와 인터셉터(Interceptor)로 수행할 수 있습니다.
+
+##### 필터와 인터셉터의 차이점
+
+- 필터는 디스패처 서블릿 앞단에서 동작하지만 인터셉터는 디스패치 서블릭에서 핸들러 컨트롤러로 가기전에 동작합니다.
+- 필터는 J2EE표준 스펙에 있는 서블릿의 기능 중 일부이지만 인터셉터는 스프링 프레임워크에서 제공되는 기능입니다. 따라서 필터와 달리 `인터셉터에서는 스프링 빈을 사용할 수 있다.`
+- 문자열 인코딩과 같은 웹 전반에서 사용되는 기능은 필터로 구현을 하고, 클라이언트 요청과 관련이 있는 여러가지 처리(로그인이나 인증, 권한등)는 인터셉터로 처리합니다.
+
+##### HandlerInterceptorAdapter로 인터셉터 구현하기
+
+```java
+public class LoggerInterceptor extends HandlerInterceptorAdapter {
+	// 컨트롤러 실행전에 수행
+  @Override
+	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+			throws Exception {
+		log.debug("======= START =======");
+		log.debug(" Request URI \t : {} ", request.getRequestURI());
+		return super.preHandle(request, response, handler);
+	}
+	// 컨트롤러 수행후 결과를 뷰로 보내기 전에 수행됩니다.
+	@Override
+	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
+			ModelAndView modelAndView) throws Exception {
+		log.debug("======= END =======");
+	}
+	
+  // 뷰의 작업까지 완료된후 수행됩니다.
+  @Override
+	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
+			throws Exception {
+		// TODO Auto-generated method stub
+		super.afterCompletion(request, response, handler, ex);
+	}
+}
+
+```
+
+##### Interceptor 등록하기
+
+```java
+@Configuration
+public class WebMvcConfiguration implements WebMvcConfigurer {
+	@Override
+	public void addInterceptors(InterceptorRegistry registry) {
+		registry.addInterceptor(new LoggerInterceptor());
+	}
+}
+```
+
