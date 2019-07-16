@@ -261,3 +261,193 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
 }
 ```
 
+
+
+### AOP 사용하기
+
+AOP는 OOP를 더욱 OOP답게 사용하도록 도와주는 개념으로 AOP를 이해하기 위해서는 우선 OOP의 이해가 필요합니다.
+
+어플리케이션을 개발하다보면 객체의 핵심코드 외에도 여러가지 기능이 들어갑니다. 메서드 호출 전후의 로그, 데이터 검증 및 확인 로그, 예외처리 등 핵심기능과 관계는 없지만 그렇다고 없어서도 안 되는 코드들이 삽이되면서 객체의 모듈화가 어려워지곤 합니다. 이런 부가 기능의 관점에서 보는 것이 AOP이다. 부가 기능의 관점에서는 핵심 로직이 어떤 역할을 하는지는 몰라도 됩니다. 단지 부가 기능이 적용될 시점, 즉 핵심 로직의 시작이나 종료 시점에 그곳에서 필요한 부가 기능이 적용되기만 하면 됩니다. 
+
+AOP는 애플리케이션 전반에서 사용되는 기능을 여러 코드에 쉽게 적용할 수 있도록 합니다. 결국 공통된 기능을 재사용할수 있게 해주는 것이라고 이해하면 쉬울듯 하다. 
+
+##### AOP 용어
+
+- `관점(Aspect)` : 공통적으로 적용될 기능을 의미합니다. 횡단 관심사의 기능이라고도 할 수 있으며 한 개 이상의 포인트컷과 어드바이스의 조합으로 만들어 집니다.
+
+- `어드바이스(Advice)` : 관점의 구현체로 조인포인트에 삽입되어 동작하는 것을 의미합니다. 
+
+  - @Before : 대상 메서드가 실행되기 전에 적용할 어드바이스를 정의합니다.
+  - @AfterReturning : 대상 메서드가 성공적으로 실행되고 결과값을 반환한후 적용할 어드바이스를 정의합니다.
+  - @AfterThrowing : 대상 메서드에서 예외가 발생했을때 적용할 어드바이스를 정의합니다.
+  - @After : 대상 메서드의 정상적인 수행 여부와 상관없이 무조건 실행되는 어드바이스를 정의합니다.
+  - @Around : 대상 메서드의 호출 전후, 예외발생등 모든 시점에 적용할 수 있는 어드바이스를 정의합니다.
+
+- `조인포인트(Joinpoint)` : 어드바이스를 적용하는 지점을 의미합니다. 스프링 프레임워크에서 조인포인트는 항상 메서드 실행 단계만 가능합니다.
+
+- `포인트컷(Pointcut)` : 어드바이스를 적용할 조인포인트를 선별하는 과정이나 그 기능을 정의한 모듈을 의미합니다.
+
+  - execution : 가장 많이 상용되는 지시자로서 접근제어자, 리턴타입, 타입패턴, 메서드, 파라미터 타입, 예외타입 등을 조합해서 가장 정교한 포인트컷을 만들 수 있다. `*`는 모든 값이라는 의미, `..` 은 0개 이상이라는 의미입니다.
+
+  - within : 특정 타입에 속하는 메서드를 포인트컷으로 설정합니다.
+
+    ```java
+    within(board.service.boardServiceImpl)
+    within(board.service.*ServiceImpl)
+    ```
+
+  - bean : 스프링의 빈 이름의 패턴으로 포인트컷을 설정합니다.
+
+    ```java
+    bean(boardServiceImpl)
+    bean(*ServiceImpl)
+    ```
+
+- `타깃(Target)` : 어드바이스를 받을 대상을 의미합니다. 
+
+- `위빙(Weaving)` : 어드바이스를 적용하는 것을 의미합니다. 즉, 공통 토드를 원하는 대상에 삽입하는 것을 뜻합니다.
+
+##### AOP 적용하기
+
+```java
+@Component
+@Aspect // 자바코드에서 AOP를 설정
+@Slf4j
+public class LoggerAspect {
+	
+  // 해당기능이 실행될 시점, 즉 어드바이스를 정의합니다.
+  // @Around는 대상 메서드의 호출 전후, 예외 발생 등 모든 시점에 적용할수 있는 어드바이스 이다. 
+  // execution은 포인트컷 표현식으로 적용할 메서드를 명시할 때 사용됩니다.
+	@Around("execution(* board..controller.*Controller.*(..)) or execution(* board..service.*Impl.*(..)) or execution(* board..mapper.*Mapper.*(..))")
+	public Object logPrint(ProceedingJoinPoint joinPoint) throws Throwable {
+		String type = "";
+		String name = joinPoint.getSignature().getDeclaringTypeName();
+		if(name.indexOf("Controller") > 1) {
+			type = "Controller \t: ";
+		} else if(name.indexOf("Impl") > 1) {
+			type = "Service \t: ";
+		} else if(name.indexOf("Mapper") > 1) {
+			type = "Mapper \t: ";
+		}
+		
+		log.debug(type+name+","+joinPoint.getSignature().getName()+ "()");
+		return joinPoint.proceed();
+	}
+}
+```
+
+
+
+### 트랙잭션 적용하기 
+
+스프링에서 트랜잭션을 처리하는 방식은 XML설정 과 어노테이션을 이용하는 방식, AOP를 이용하는 방식으로 나눌 수 있습니다.
+
+##### 트랜잭션
+
+- 데이터베이스의 상태를 변화시킬 때 더 이상 분리할 수 없는 작업의 단위를 의미합니다. 
+- 즉 되려면 모두 다 되어야하고, 하나라도 안된다면 모두 안되어야 한다.
+
+###### ACID 속성
+
+- 원자성(Atomicity) :  트랜잭션은 하나 이상의 관련된 동작을 하나의 작업 단위로 처리합니다.
+- 일관성(Consistency) : 트랜잭션은 성공적으로 처리되면 데이터베이스의 관련된 모든 데이터는 일관성을 유지해야 합니다.
+- 고립성(Isolation) : 트랜잭션은 독립적으로 처리되며, 처리되는 중간에 외부에서의 간섭은 없어야 합니다.
+- 지속성(Durability) : 트랜잭션이 성공적으로 처리되면 그 결과는 지속적으로 유지되어야 합니다.
+
+##### @Transaction  어노테이션 이용해 설정
+
+```java
+@Configuration
+@PropertySource("classpath:/application.properties") // 설정파일의 위치를 지정해 줍니다.
+@EnableTransactionManagement // 트랜잭션을 활성화 한다. 
+public class DatabaseConfiguration {
+  
+  ....
+  
+  // 트랙잭션 매니저를 등록한다. 
+	@Bean
+	public PlatformTransactionManager transationManager() throws Exception {
+		return new DataSourceTransactionManager(dataSource());
+	}	
+}  
+
+
+@Service
+@Transactional // @Transactional는 인터페이스나 클래스, 메서드에 사용할 수 있습니다.
+public class BoardServiceImpl implements BoardService {
+	...
+}
+```
+
+##### AOP를 이용해 트랜잭션 설정
+
+- @Transaction 어노테이션 방식을 사용하면 새로운 클래스 또는 메서드 등을 만들 때마나 어노테이션을 붙여줘야 하는데 누락되거나 일관되지 않게 적용될 수 도 있습니다. 
+- 외부라이브러리를 사용하면 해당 라이브러리의 코드를 편집할 수 없기 때문에 트랜잭션이 적절하게 처리되지 않을 수 있습니다. 
+- 이러한 문제를 해결하려면 AOP를 이용해서 트랜잭션을 설정하면 됩니다.
+
+```java
+@Configuration
+public class TransactionAspect {
+	
+	// 트랜잭션에 사용되는 설정값 
+	private static final String AOP_TRANSACTION_METHOD_NAME = "*";
+	private static final String AOP_TRANSACTION_EXPRESSION = "execution(* board..service.*Impl.*(..))";
+	
+	@Autowired
+	private PlatformTransactionManager transactionManager;
+	
+	
+	@Bean
+	public TransactionInterceptor transactionAdvice() {
+		MatchAlwaysTransactionAttributeSource source = new MatchAlwaysTransactionAttributeSource();
+		RuleBasedTransactionAttribute transactionAttribute = new RuleBasedTransactionAttribute();
+		// 트랜잭션 모니터에서 트랜잭션의 이름을 확인할수 있다.
+		transactionAttribute.setName(AOP_TRANSACTION_METHOD_NAME); 
+		// 롤백 룰설정(Exception을 하면 모든 예외시 발생한다.
+		transactionAttribute.setRollbackRules(Collections.singletonList(new RollbackRuleAttribute(Exception.class)));
+		source.setTransactionAttribute(transactionAttribute);
+		return new TransactionInterceptor(transactionManager, source); 
+	}
+	
+	@Bean
+	public Advisor transactionAdviceAdvisor() {
+		// AOP 포인트것을 설정
+		AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+		pointcut.setExpression(AOP_TRANSACTION_EXPRESSION);	
+		return new DefaultPointcutAdvisor(pointcut, transactionAdvice());
+	}
+}
+```
+
+
+
+### 예외처리하기
+
+예외처리방식은 크게 3가지가 있습니다.
+
+1. Try/catch를 이용한 예외처리
+2. 각각의 컨트롤러 단에서 @ExceptionHandler를 이용한 예외처리
+   1. 컨트롤러별로 동일한 예외처리를 추가해야 하기 때문에 코드가 많이 중복됩니다.
+3. @ControllerAdvice를 이용한 전역 예외처리
+
+##### @ControllerAdvice 추가하기
+
+```java
+// 해당 클래스가 예외처리 클래스임을 알려준다.
+@ControllerAdvice
+@Slf4j
+public class ExceptionHandler {
+	
+	// 실무에서는 Exception 을 하면안되고 예외별로 정해줘야 한다. 
+	@org.springframework.web.bind.annotation.ExceptionHandler(Exception.class)
+	public ModelAndView defaultExceptionHandler(HttpServletRequest request, Exception exception) {
+		ModelAndView mv = new ModelAndView("/error/error_default"); //에러를 보여줄 화면
+		mv.addObject("exception", exception);
+		log.debug("exception",exception);
+		return mv;
+	}
+}
+```
+
+
+
