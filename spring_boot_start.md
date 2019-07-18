@@ -451,3 +451,196 @@ public class ExceptionHandler {
 
 
 
+## 파일 업로드 & 다운로드
+
+- 스프링 프레임워크에는 파일 업로드를 위한 MultipartResolver인터페이스가 정의되어 있다. 일반적으로 사용되는 구현체는 아래와 같다.
+  - 아파치의 Common Fileupload를 이용한 CommonsMultipartResolver
+  - 서블릿 3.0이상의 API를 이용한 StandardServletMultipartResolver
+
+###아파치의 Common Fileupload 이용한 업로드 
+
+- 라이브러리 추가 
+
+```gradle
+
+implementation group:'commons-io', name:'commons-io', version:'2.5'
+implementation group:'commons-fileupload', name:'commons-fileupload', version:'1.3.3'
+```
+
+- 빈 생성 
+
+```java
+// Multipart 설정 
+@Bean
+public CommonsMultipartResolver multipartResolver() {
+  CommonsMultipartResolver commonsMultipartResolver = new CommonsMultipartResolver();
+  commonsMultipartResolver.setDefaultEncoding("UTF-8"); // 인코딩 설정 
+  commonsMultipartResolver.setMaxUploadSizePerFile(5 * 1045 * 1024); // 파일 용량 5Mb로 제한
+  return commonsMultipartResolver;
+}
+```
+
+* 스프링 부트는 자동구성이 되어 있는 부분이 많기 때문에 파일 업로드에 대한 자동구성을 사용하지 않도록 변경해줘야한다. 
+
+```java
+  @SpringBootApplication(exclude = {MultipartAutoConfiguration.class}) // 부트 자동설정을 제외시킨다.
+  public class BoardApplication {
+  	public static void main(String[] args) {
+  		SpringApplication.run(BoardApplication.class, args);
+  	}
+  }  
+```
+
+- 뷰 부분 소스
+
+```html
+<form id="frm" name="frm" method="post" enctype="multipart/form-data" action="/board/insertBoard.do">
+  <table class="board_detail">
+    <tr>
+      <td>제목</td>
+      <td><input type="text" id="title" name="title"/></td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <textarea id="contents" name="contents"></textarea>
+      </td>
+    </tr>
+  </table>
+  <input type="file" id="files" name="files" multiple="multiple" />
+  <input type="submit" id="submit" value="저장" class="btn">
+</form>
+```
+
+- 컨트롤러 부분
+
+```java
+@RequestMapping("/board/insertBoard.do")
+	public String insertBoard(BoardDto board, MultipartHttpServletRequest multipartHttpServletRequest) throws Exception {
+		boardService.insertBoard(board, multipartHttpServletRequest);
+		return "redirect:/board/openBoardList.do";
+	}
+```
+
+- 파일 저장 관련 서비스 부분
+
+```java
+public List<BoardFileDto> parseFileInfo(int boardIdx, 
+			MultipartHttpServletRequest multipartHttpServletRequest) throws Exception {
+  if(ObjectUtils.isEmpty(multipartHttpServletRequest)) {
+    return null;
+  }
+  List<BoardFileDto> fileList = new ArrayList<>();
+  // 파일 저장 경로 설정 
+  DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyyMMdd");
+  ZonedDateTime current = ZonedDateTime.now(); // 오늘날짜를 가져옵니다. 
+  String path = "images/"+current.format(format);
+  File file = new File(path);
+  if(file.exists() == false) {
+    file.mkdirs();
+  }
+
+  Iterator<String> iterator = multipartHttpServletRequest.getFileNames();
+  String newFileName, originalFileExtension, contentType;
+  while(iterator.hasNext()) {
+    // iterator.next() == files
+    // 화면에서 files로 보낸 파일들 리스트를 가져올수 있다.
+    List<MultipartFile> list = multipartHttpServletRequest.getFiles(iterator.next());
+    for(MultipartFile multipartFile : list) {
+      if(multipartFile.isEmpty() == false) {
+        // 파일 확장자 체크는 contentType으로 해야한다. 파일명에서 가져오면 위변조 할수 있기때문이다.
+        contentType = multipartFile.getContentType();
+        if(ObjectUtils.isEmpty(contentType)) {
+          break;
+        } else {
+          if(contentType.contains("image/jpeg")) {
+            originalFileExtension = ".jpg";
+          }else if(contentType.contains("image/png")) {
+            originalFileExtension = ".png";
+          }else if(contentType.contains("image/gif")) {
+            originalFileExtension = ".gif";
+          }else {
+            break;
+          }
+        }
+
+        // 파일이름은 중복되지 않게 나노타임을 사용했다.
+        newFileName = Long.toString(System.nanoTime()) + originalFileExtension;
+        BoardFileDto boardFile = new BoardFileDto();
+        boardFile.setBoardIdx(boardIdx);
+        boardFile.setFileSize(multipartFile.getSize());
+        boardFile.setOriginalFileName(multipartFile.getOriginalFilename());
+        boardFile.setStoredFilePath(path + "/" + newFileName);
+        fileList.add(boardFile);
+
+        // 새로운 이름을 변경된 파일을 저장한다.
+        file = new File(path + "/" + newFileName);
+        multipartFile.transferTo(file);
+      }
+    }
+  }
+  return fileList;
+}
+```
+
+
+
+- Mapper
+  - useGeneratedKeys속성은 DBMS가 자동 생성키를 지원할 경우에 사용할 수 있습니다. 
+  - keyProperty는 useGeneratedKeys나 selectKey의 하위 엘리먼트에 의해 리턴퇴는 키를 의미합니다.
+  - BoardDto에 boardIdx에 생성된 키가 저장이 된다. 
+
+```xml
+<insert id="insertBoard" parameterType="board.dto.BoardDto" 
+        useGeneratedKeys="true" keyProperty="boardIdx">
+		<![CDATA[
+			INSERT INTO T_BOARD
+			(
+				TITLE,
+				CONTENTS,
+				CREATED_DATETIME,
+				CREATOR_ID
+			)
+			VALUES
+			(
+				#{title},
+				#{contents},
+				NOW(),
+				'admin'
+			)
+		]]>
+	</insert>
+```
+
+
+
+### 파일 다운로드
+
+```java
+import org.apache.commons.io.FileUtils;
+
+@RequestMapping("/board/downloadBoardFile.do")
+public void downloadBoardFile(@RequestParam int idx, 
+                              @RequestParam int boardIdx, HttpServletResponse response) throws Exception {
+
+  BoardFileDto boardFile = boardService.selectBoardFileInfomation(idx, boardIdx);
+  if(ObjectUtils.isEmpty(boardFile) == false) {
+    String fileName = boardFile.getOriginalFileName();
+
+    // 파일을 읽어온후 바이트 배열 형태로 변환합니다. org.apache.commons.io 패키지의 FileUtils이다. 
+    byte[] files = FileUtils.readFileToByteArray(new File(boardFile.getStoredFilePath()));
+
+    // response의 헤더에 콘텐츠 타입, 크키 및 형태등을 설정 
+    response.setContentType("application/octet-stream");
+    response.setContentLength(files.length);
+    response.setHeader("Content-Disposition","attachment; fileName=\""+URLEncoder.encode(fileName,"UTF-8")+"\";");
+    response.setHeader("Content-Transfer-Encoding", "binary");
+
+    // 읽어온 파일 정보의 바이트 배열 데이터를 response에 작성합니다.
+    response.getOutputStream().write(files);
+    // response의 버퍼를 정리하고 닫아줍니다.
+    response.getOutputStream().flush();
+    response.getOutputStream().close();
+  }
+}
+```
+
