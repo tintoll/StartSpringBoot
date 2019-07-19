@@ -644,3 +644,71 @@ public void downloadBoardFile(@RequestParam int idx,
 }
 ```
 
+
+
+## REST API
+
+REST : 잘 표현된 HTTP URI로 리소스를 정의하고 HTTP메소드로 리소스에 대한 행위를 정의합니다. 
+
+리소스 : 서비스를 제공하는 시스템의 자원을 의미하는 것으로 URI(Uniform Resource Identifier)로 정의됩니다.
+
+#### URI 설계 규칙
+
+1. URI는 명사를 사용합니다 
+2. 슬래시(/)로 계층 관계를 나타냅니다.
+3. URI의 마지막에는 슬래시를 사용하지 않습니다.
+4. URI는 소문자로만 작성합니다.
+5. 가독성을 높이기 위해 하이픈(-)를 사용할 수는 있지만 밑줄(_)은 사용하지 않습습니다.
+
+#### PUT, DELETE 사용하기
+
+```html
+<input type="hidden" id="method" name="_method" value="put" />
+```
+
+HTML은 POST와 GET방식의 요청만 지원하고 PUT, DELETE방식은 지원하지 않습니다.  스프링은 웹 브라우저에서 사용되는 POST, GET방식을 이용하여 PUT과 DELETE방식을 사용할수 있는 기능을 지원하는데 `HiddenHttpMethodFilter`가 바로 그것입니다. 이 필터는 스프링 부트 2.0에서는 직접 빈으로 등록해야 했지만 스프링 부트 2.1.x에는 이미 필터가 등록되어 있어 별도로 설정하지 않아도 된다.
+
+#### Rest API Controller
+
+```java
+@RestController
+public class RestBoardApiController {
+
+	@Autowired
+	private BoardService boardService;
+	
+	@GetMapping("/api/board")
+	public List<BoardDto> openBoardList() throws Exception {
+		return boardService.selectBoardList();
+	}
+	
+	// post나 put은 http body에서 값을 가져오기 때문에 @RequestBody사용한다. 
+	@PostMapping("/api/board/write")
+	public void insertBoard(@RequestBody BoardDto board) throws Exception {
+		boardService.insertBoard(board, null);
+	}
+	
+	@GetMapping("/api/board/{boardIdx}")
+	public BoardDto openBoardDetail(@PathVariable("boardIdx") int boardIdx) throws Exception {
+		return boardService.selectBoardDetail(boardIdx);
+	}
+	
+	@PutMapping("/api/board/{boardIdx}")
+	public String updateBoard(@RequestBody BoardDto board) throws Exception {
+		boardService.updateBoard(board);
+		return "redirect:/board";
+	}
+	
+	@DeleteMapping("/api/board/{boardIdx}")
+	public String deleteBoard(@PathVariable("boardIdx") int boardIdx) throws Exception {
+		boardService.deleteBoard(boardIdx);
+		return "redirect:/board";
+	}
+	
+}
+```
+
+- `@RestController` 어노테이션은 @Controller와 @ResponseBody 어노테이션을 합친 어노테이션입니다.  이 어노테이션을 사용하면 해당 API의 응답 결과를 웹 응답 바디(Web response body)를 이용해서 보내줍니다. 일반적으로 서버와 클라이언트의 통신에 JSON형식을 사용합니다.
+
+- GET과 POST의 주요한 차이점 중하나는 GET은 요청주소에 파라미터를 같이 보내는 것이고 POST는 GET과 달리 파라미터를 HTTP 패킷의 바디에 담아서 전송한다는 것이다. `@RequestBody` 어노테이션은 메서드의 파라미터가 반드시 HTTP 패킷의 바디에 담겨 있어야 한다는 것을 나타냅니다.  반대로 GET메서드는 @RequestParam 어노테이션을 사용합니다.
+
