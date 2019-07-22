@@ -712,3 +712,171 @@ public class RestBoardApiController {
 
 - GET과 POST의 주요한 차이점 중하나는 GET은 요청주소에 파라미터를 같이 보내는 것이고 POST는 GET과 달리 파라미터를 HTTP 패킷의 바디에 담아서 전송한다는 것이다. `@RequestBody` 어노테이션은 메서드의 파라미터가 반드시 HTTP 패킷의 바디에 담겨 있어야 한다는 것을 나타냅니다.  반대로 GET메서드는 @RequestParam 어노테이션을 사용합니다.
 
+
+
+## Spring Data JPA
+
+JPA(Java Persistence API)란 자바 객체와 데이터베이스 테이블 간의 매핑을 처리하는 ORM(Object Relational Mapping) 기술의 표준입니다.
+
+##### 장점
+
+1. 개발이 편리하다
+2. 데이터베이스에 독립적인 개발이 가능하다
+3. 유지보수가 쉽다.
+
+##### 단점
+
+1. 학습곡선이 크다
+2. 특정 데이터베이스의 기능을 사용할 수 없다.
+3. 객체지향 설계가 필요하다
+
+#### 스프링 데이터 JPA란?
+
+스프링 데이터 JPA는 리포지터리(Repository)라는 인터페이스를 제공합니다. 이 인터페이스만 상속받아 정해진 규칙에 맞게 메서드를 작성하면 개발자가 작성해야 할 코드가 완성됩니다.
+
+#### 스프링 데이터 JPA 기본설정
+
+- application.properties
+
+  ```properties
+  ## jpa 설정 
+  spring.jpa.database=mysql
+  # InnoDB엔진을 사용하게 설정
+  spring.jpa.database-platform=org.hibernate.dialect.MySQL5InnoDBDialect
+  # JPA의 엔티티 연관관계를 바탕으로 테이블 생성과 같은 스크립트를 자동으로 실행하도록합니다.
+  # 실제 개발에서는 false로 해야한다.
+  spring.jpa.generate-ddl=true
+  # 하이버네이트의 새로운 ID 생성 옵션의 사용여부
+  spring.jpa.hibernate.use-new-id-generator-mappings=false
+  ```
+
+- 빈등록하기
+
+  ```java
+  @Bean
+  @ConfigurationProperties(prefix = "spring.jpa") 
+  public Properties hibernateConfig() {
+    return new Properties();
+  }
+  ```
+
+- 자바8의 날짜 API 설정
+
+  - 자바8의 날짜 및 시간 관련 클래스를 그대로 사용할 경우 MySQL의 버전에 따라 문제가 발생할 수 있습니다. 이 문제를 해결하는 방법이 여러가지 있는데 Jsr310JpaConverters 적용방법을 설정해보자
+
+    ```java
+    // java8 날짜관련 클래스를 그대로 사용하기 위한 설정 
+    @EnableJpaAuditing
+    @EntityScan(
+    		basePackageClasses = {Jsr310JpaConverters.class},
+    		basePackages = {"board"}
+    		)
+    @SpringBootApplication(exclude = {MultipartAutoConfiguration.class}) // 부트 자동설정을 제외시킨다.
+    public class BoardApplication {
+    	public static void main(String[] args) {
+    		SpringApplication.run(BoardApplication.class, args);
+    	}
+    }
+    ```
+
+#### 스프링 데이터 JPA 이용하기
+
+- 엔티티 생성
+
+```java
+@Entity
+@Table(name = "t_jpa_board")
+@NoArgsConstructor
+@Data
+public class BoardEntity {
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private int boardIdx;
+	
+	@Column(nullable = false)
+	private String title;
+	
+	@Column(nullable = false)
+	private String contents;
+	
+	@Column(nullable = false)
+	private int hitCnt = 0;
+	
+	@Column(nullable = false)
+	private String creatorId;
+	
+	@Column(nullable = false)
+	private LocalDateTime createdDatetime = LocalDateTime.now();
+	
+	private String updateId;
+	private LocalDateTime updatedDatetime;
+	
+  // 1:N의 관계를 표현하는 어노테이션
+	@OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+  // 릴레이션 관계가 있는 테이블의 컬럼을 지정합니다.
+	@JoinColumn(name = "boardIdx")
+	private Collection<BoardFileEntity> fileList;
+}
+```
+
+- 레파지토리 생성
+
+```java
+// 가장 간단히 사용하는 CrudRepository를 상속받는다.
+public interface JpaBoardRepository extends CrudRepository<BoardEntity, Integer>{
+	// 규칙에 맞도록 리포지터리에 메서드를 추가하면 실행시 메서드의 이름에 따라 쿼리가 생성되어 실행됩니다.
+	List<BoardEntity> findAllByOrderByBoardIdxDesc();
+	
+  // 실행하고 싶은 쿼리를 직접 정의할수 있다 
+	@Query("SELECT file FROM BoardFileEntity file WHERE board_idx = :boardIdx AND idx = :idx")
+	BoardFileEntity findBoardFile(@Param("boardIdx") int boardIdx,@Param("idx") int idx);
+}
+```
+
+- 리포지터리 인터페이스 종류
+  - Repository : 아무런 기능이 없어 잘 사용안함.
+  - CrudRepository : CRUD기능을 기본적으로 제공 
+  - PaginAndSotingRepository : 페이징 및 정렬기능이 추가 됨
+  - JpaRepository : JPA에 특화된 기능까지 추가된 인터페이스 
+
+- CrudRepository가 제공하는 메서드
+  - save : 주어진 엔티티를 저장
+  - saveAll : 주어진 엔티티 목록을 저장
+  - findById : 주어진 아이디로 식별된 엔티티를 반환
+  - existsById : 주어진 아이디로 식별된 엔티티가 존재하는지를 반환
+  - findAll : 모든 엔티티를 반환
+  - findAllById : 주어진 아이디 목록에 맞는 모든 엔티티 목록을 반환합니다.
+  - count : 사용 가능한 엔티티의 개수를 반환
+  - deleteById : 주어진 아이디로 식별된 엔티티를 삭제
+  - delete : 엔티티를 삭제
+  - deleteAll : 모든 엔티티를 삭제
+- 쿼리 메서드 
+  - https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#jpa.query-methods.query-creation
+
+| Keyword             | Sample                                                       | JPQL snippet                                                 |
+| :------------------ | :----------------------------------------------------------- | :----------------------------------------------------------- |
+| `And`               | `findByLastnameAndFirstname`                                 | `… where x.lastname = ?1 and x.firstname = ?2`               |
+| `Or`                | `findByLastnameOrFirstname`                                  | `… where x.lastname = ?1 or x.firstname = ?2`                |
+| `Is,Equals`         | `findByFirstname`,`findByFirstnameIs`,`findByFirstnameEquals` | `… where x.firstname = ?1`                                   |
+| `Between`           | `findByStartDateBetween`                                     | `… where x.startDate between ?1 and ?2`                      |
+| `LessThan`          | `findByAgeLessThan`                                          | `… where x.age < ?1`                                         |
+| `LessThanEqual`     | `findByAgeLessThanEqual`                                     | `… where x.age <= ?1`                                        |
+| `GreaterThan`       | `findByAgeGreaterThan`                                       | `… where x.age > ?1`                                         |
+| `GreaterThanEqual`  | `findByAgeGreaterThanEqual`                                  | `… where x.age >= ?1`                                        |
+| `After`             | `findByStartDateAfter`                                       | `… where x.startDate > ?1`                                   |
+| `Before`            | `findByStartDateBefore`                                      | `… where x.startDate < ?1`                                   |
+| `IsNull`            | `findByAgeIsNull`                                            | `… where x.age is null`                                      |
+| `IsNotNull,NotNull` | `findByAge(Is)NotNull`                                       | `… where x.age not null`                                     |
+| `Like`              | `findByFirstnameLike`                                        | `… where x.firstname like ?1`                                |
+| `NotLike`           | `findByFirstnameNotLike`                                     | `… where x.firstname not like ?1`                            |
+| `StartingWith`      | `findByFirstnameStartingWith`                                | `… where x.firstname like ?1` (parameter bound with appended `%`) |
+| `EndingWith`        | `findByFirstnameEndingWith`                                  | `… where x.firstname like ?1` (parameter bound with prepended `%`) |
+| `Containing`        | `findByFirstnameContaining`                                  | `… where x.firstname like ?1` (parameter bound wrapped in `%`) |
+| `OrderBy`           | `findByAgeOrderByLastnameDesc`                               | `… where x.age = ?1 order by x.lastname desc`                |
+| `Not`               | `findByLastnameNot`                                          | `… where x.lastname <> ?1`                                   |
+| `In`                | `findByAgeIn(Collection<Age> ages)`                          | `… where x.age in ?1`                                        |
+| `NotIn`             | `findByAgeNotIn(Collection<Age> ages)`                       | `… where x.age not in ?1`                                    |
+| `True`              | `findByActiveTrue()`                                         | `… where x.active = true`                                    |
+| `False`             | `findByActiveFalse()`                                        | `… where x.active = false`                                   |
+| `IgnoreCase`        | `findByFirstnameIgnoreCase`                                  | `… where UPPER(x.firstame) = UPPER(?1)`                      |
+
