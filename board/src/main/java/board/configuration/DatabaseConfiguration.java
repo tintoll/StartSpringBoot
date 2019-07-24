@@ -21,7 +21,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 @Configuration
-@PropertySource("classpath:/application.properties") // 설정파일의 위치를 지정해 줍니다.
+// @PropertySource("classpath:/application.properties") // 설정파일의 위치를 지정해 줍니다.
 // @EnableTransactionManagement // 트랜잭션을 활성화 한다. 
 public class DatabaseConfiguration {
 	
@@ -79,6 +79,7 @@ public class DatabaseConfiguration {
 		return new DataSourceTransactionManager(dataSource());
 	}
 	*/
+	
 	
 	// JPA빈
 	@Bean

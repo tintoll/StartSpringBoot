@@ -24,12 +24,17 @@ import org.springframework.web.servlet.ModelAndView;
 import board.dto.BoardDto;
 import board.dto.BoardFileDto;
 import board.service.BoardService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 
+@ApiOperation(value = "게시판 REST API")
 @RestController
 public class RestBoardApiController {
 
 	@Autowired
 	private BoardService boardService;
+	
 	
 	@GetMapping("/api/board")
 	public List<BoardDto> openBoardList() throws Exception {
@@ -42,8 +47,9 @@ public class RestBoardApiController {
 		boardService.insertBoard(board, null);
 	}
 	
+	@ApiOperation(value = "게시글 상세내용 조회")
 	@GetMapping("/api/board/{boardIdx}")
-	public BoardDto openBoardDetail(@PathVariable("boardIdx") int boardIdx) throws Exception {
+	public BoardDto openBoardDetail(@PathVariable("boardIdx") @ApiParam(value="게시글 번호") int boardIdx) throws Exception {
 		return boardService.selectBoardDetail(boardIdx);
 	}
 	

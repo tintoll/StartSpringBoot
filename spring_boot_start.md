@@ -880,3 +880,66 @@ public interface JpaBoardRepository extends CrudRepository<BoardEntity, Integer>
 | `False`             | `findByActiveFalse()`                                        | `… where x.active = false`                                   |
 | `IgnoreCase`        | `findByFirstnameIgnoreCase`                                  | `… where UPPER(x.firstame) = UPPER(?1)`                      |
 
+
+
+## 스웨거를 이용한 REST API 문서화하기
+
+스웨거란(Swagger)란 간단한 설정으로 프로젝트의 API 목록을 웹에서 확인 및 테스트 할 수 있게 해주는 라이브러리입니다.
+
+#### 스웨거 적용하기
+
+의존성 추가 
+
+```
+implementation group: 'io.springfox', name:'springfox-swagger2', version : '2.9.2'
+implementation group: 'io.springfox', name:'springfox-swagger-ui', version : '2.9.2'
+```
+
+설정 
+
+```java
+@Configuration
+@EnableSwagger2
+public class SwaggerConfiguration {
+	@Bean
+	public Docket api() {
+		return new Docket(DocumentationType.SWAGGER_2)
+				.select()
+				.apis(RequestHandlerSelectors.basePackage("board")) 
+				// any("/api/**") 와 같이 사용하면 특정 URL만 선택하수 있다.
+				.paths(PathSelectors.any()).build(); 
+	}
+}
+```
+
+#### 스웨거 설명 추가하기
+
+- @ApiOperation : API에 설명을 추가합니다.
+- @ApiParam : API의 파라미터의 설명을 추가 
+
+  ```java
+  @ApiOperation(value = "게시글 상세내용 조회")
+  @GetMapping("/api/board/{boardIdx}")
+  public BoardDto openBoardDetail(@PathVariable("boardIdx") @ApiParam(value="게시글 번호") int boardIdx) throws Exception {
+    return boardService.selectBoardDetail(boardIdx);
+  }
+  ```
+
+- @ApiModel : 모델에 설명을 추가합니다.
+
+- @ApiModelProperty : 모델의 요소에 설명을 추가합니다.
+
+  ```java
+  @ApiModel(value="BoardDto : 게시글 내용", description = "게시글 내용")
+  @Data
+public class BoardDto {
+  	@ApiModelProperty(value="게시글 번호")
+  	private int boardIdx;
+  	@ApiModelProperty(value="게시글 제목")
+  	private String title;
+  	@ApiModelProperty(value="게시글 내용")
+  	private String contents;
+  }
+  ```
+  
+  
