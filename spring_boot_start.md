@@ -983,7 +983,57 @@ spring.profiles.active=dev
 
 스프링 Cloud Config는 설정정보를 배포하는 스프링 Cloud Config Server와 Config 서버로부터 설정을 받아와서 사용하는 스프링 Cloud Config Client로 나뉘어 있습니다.
 
+## YAML 사용하기
 
+YAML이란 사람이 쉽게 읽을 수 있는 데이터 표현 방식입니다.
+
+```yaml
+spring:
+  datasource:
+    hikari:
+      allow-pool-suspension: true
+      connection-test-query: SELECT 1
+  jpa:
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
+    generate-ddl: true
+    hibernate:
+      use-new-id-generator-mappings: false
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    
+# ---를 사용해서 하나의 파일 내에서 여러개의 구성을 만들 수 있다. 여기서는 공통설정, dev설정, production설정을 구분했다.
+---
+spring:
+  profiles: dev
+  datasource:
+    hikari:
+      driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+      jdbc-url: jdbc:log4jdbc:mysql://localhost:3306/board?useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
+      username: spring
+      password: lee1234@
+  thymeleaf:
+    cache: false
+  resources:
+    cache:
+      period: 0
+      
+---
+ spring:
+  profiles: production
+  datasource:
+    hikari:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbc-url: jdbc:mysql://localhost:3306/board?useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
+      username: spring
+      password: lee1234@         
+```
+
+#### YML의 장점
+
+1. YML은 계층 구조를 표현하기에 적합합니다.
+2. 하나의 파일로 여러개의 설정을 구분할 수 있습니다.
 
 
 
