@@ -942,4 +942,62 @@ public class BoardDto {
   }
   ```
   
-  
+
+## 스프링 프로파일 적용
+
+스프링은 프로파일이라는 기능을 통해서 각각의 환경에 맞는 설정을 지정해서 실행 또는 패키징 시 원하는 설정을 사용할 수 있도록 제공합니다.
+
+```properties
+# application.properties (공통설정이 들어감)
+spring.profiles.active=dev
+
+# application-dev.properties (개발 환경 설정)
+
+# application-production.properties (운영 환경 설정)
+```
+
+```xml
+<!-- logback-spring.xml profile 적용 -->
+<springProfile name="dev">
+  <logger name="board" level="DEBUG" appender-ref="console"/>
+  <logger name="jdbc.sqlonly" level="INFO" apperder-ref="console-infolog" />
+  <logger name="jdbc.resultsettable" level="INFO" apperder-ref="console-infolog" />
+</springProfile>
+<springProfile name="production">
+  <logger name="board" level="ERROR" appender-ref="console"/>
+</springProfile>
+```
+
+## 스프링 Cloud Config 사용하기
+
+스프링 프로파일을 사용하였을 경우  설정이 변경되면 다시 빌드, 배포를 해야한다. 동작하는 어플리케이션을 재시작해야만 적용이 됩니다.  이러한 문제 때문에 Twelve-factor app(https://12factor.net/ko/)이라는 방법론에서는 설정을 코드에서 분리하라고 이야기 합니다. 
+
+수많은 서버나 개발자들에게 변경된 설정 파일을 배포해야 하는 상황에서 코드와 설정을 분리하고 효율적으로 관리해야 할 필요가 생겼습니다. 이를 해결해 주는 것이 바로 스프링 Cloud Config 입니다. 스프링 Cloud Config는 설정을 분리해서 설정 정보만 가지는 서버와 이 설정 정보에서 애플리케이션에 필요한 설정 정보를 받아오는 클라이언트로 구성됩니다. 따라서 클라이언트에서는 설정 정보를 가지고 있지 않기 때문에 설정의 변경사항을 모든 개발자 및 서버에 쉽게 반영할 수 있습니다.
+
+#### 스프링 Cloud Config
+<img src="./spring_cloud.png" />
+
+코드와 설정의 분리를 위해서 설정 파일을 깃 저장소(Git Repository)에 저장합니다. 설정서버(Config Server)는 깃 저장소를 보고 있습니다. 즉, 설정 서버는 깃 저장소에 저장된 설정 파일을 확인 및 배포하는 역할을 합니다. 마지막으로 각각의 애플리케이션들은 설정 서버로 부터 자신들에게 필요한 설정 정보를 가지고 옵니다. 
+
+깃 관리자에 의해 깃 저장소의 설정 정보가 수정되었을 경우(Push Config)설정 서버는 이를 감지하고 수정된 설정 정보로 갱신합니다. 그리고 각 애플리케이션은 수정된 설정 정보를 재시작 없이 설정 서버로부터 받아와서 갱신합니다. 따라서 설정 정보는 중앙에서 관리할 수 있으며 설정이 변경되더라도 사용하는 서버의 숫자에 관계없이 즉각적으로 설정 정보를 변경할 수 있습니다.
+
+스프링 Cloud Config는 설정정보를 배포하는 스프링 Cloud Config Server와 Config 서버로부터 설정을 받아와서 사용하는 스프링 Cloud Config Client로 나뉘어 있습니다.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
