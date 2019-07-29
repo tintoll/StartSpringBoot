@@ -1037,6 +1037,77 @@ spring:
 
 
 
+## Cloud-Config Server 만들기
+
+1. 프로젝트를 생성할때 Config Server 만 의존성을 추가한후 프로젝트를 생성한다. 
+
+2. config server를 수행하도록 @EnableConfigServer 를 추가하여 줍니다.
+
+   ```java
+   @SpringBootApplication
+   @EnableConfigServer
+   public class CloudConfigApplication {
+     public static void main(String[] args) {
+       SpringApplication.run(CloudConfigApplication.class, args);
+     }
+   }
+   ```
+
+3. application.properties를 yml파일로 변경하고 설정 정보를 작성하여 줍니다. 
+
+   ```yml
+   server:
+   	port: 8888
+   spring:
+   	cloud:
+   		config:
+   			server:
+   				git:
+   					uri: https://아이디@bitbucket.org/저장소이름/cloud-config.git
+   					username: 아이디
+   					password: 비밀번호
+   ```
+
+4. 서버를 실행하여 정보가 맞게 나오는지 확인합니다. http://localhost:8888/cloud-server/dev
+
+## Cloud Client 적용하기
+
+의존성 추가 
+
+```gradle
+ext{
+	springCloudVersion = 'Finchley.RELEASE'
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.cloud:spring-cloud-starter-config'
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+	}
+}
+```
+
+applicaiont.yml 수정
+
+```yml
+spring:
+  profiles: dev
+  cloud:
+    config: 
+      uri: http://localhost:8888
+      name: cloud-config
+```
+
+
+
+
+
+
+
 
 
 
